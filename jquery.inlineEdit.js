@@ -10,18 +10,18 @@
 * Adds inline edit to html elements with classes editableSingle and editableMulti.
 * Elements must have class to identify type of data and id.
 * Types are linked to urls
-* 
+*
 * Example:
 * <li class="editableSingle categoryName id3">
-* 
+*
 * Javascript:
 * $.inlineEdit({categoryName: 'category/edit/id/'});
-* 
-* 
+*
+*
 * Or:
 * <td class="editableSingle videoTitle id3"></td>
 * <td class="editableMulti videoDescription id3"></td>
-* 
+*
 * Javascript:
 * $.inlineEdit({
 *     videoTitle: '/video/edit/title/',
@@ -31,9 +31,9 @@
 
 (function($){
 $.inlineEdit = function(urls, options){
-	
+
 	var editableUrls = urls;
-	
+
 	var options = jQuery.extend({
 		afterSave: function(){},
 		afterRemove: function(){},
@@ -44,39 +44,44 @@ $.inlineEdit = function(urls, options){
 			success: 'green',
 			error: 'red'/*,
 			standard: '#000'*/
-		}
+		},
+		defaultValue: function() {}
 	}, options);
-	
+
 	var initialValues = {};
 	var editableFields = false;
 	var linkClicked = false;
-	
+
 	if ($('.editableSingle, .editableMulti').length > 0) {
 		var simpleMode = $('.editableSingle, .editableMulti')[0].tagName.toLowerCase() != 'td';
 		options.colors.standard = $('.editableSingle, .editableMulti').eq(0).css('color');
 	}
-	
+
 	$('.editableSingle').click(function(){
 		if (linkClicked) {
 			linkClicked = false;
 			return;
 		}
-		
+
 		if (!editableFields || $('.editField').length < editableFields) {
 			var value = options.filterElementValue($(this));
 			saveInitialValue($(this));
 			$(this).addClass('isEditing').css('color', options.colors.standard).stop();
-			
+
+			if (value=='') {
+				value = options.defaultValue($(this));
+			}
+
 			if ($('.editFieldFirst').length == 0) {
 				editableFields = $(this).siblings('.editableSingle, .editableMulti').length + 1;
 				$(this).html('<div class="editFieldWrapper"><input type="text" value="' + value + '" class="editField editFieldFirst" /></div>');
-				
-				if (!simpleMode) {                       
+
+				if (!simpleMode) {
 				   $(this).siblings('.editableSingle, .editableMulti').click();
 				} else {
 					editableFields = 1;
 				}
-				
+
 				addSaveControllers(function(){
 					$('.editFieldFirst').focus();
 				});
@@ -85,26 +90,26 @@ $.inlineEdit = function(urls, options){
 			}
 		}
 	});
-	
+
 	$('.editableMulti').click(function(){
 		if (linkClicked) {
 			linkClicked = false;
 			return false;
 		}
-		
+
 		if (!editableFields || $('.editField').length < editableFields) {
 			var value = options.filterElementValue($(this));
 			saveInitialValue($(this));
 			$(this).addClass('isEditing').css('color', options.colors.standard).stop();
-			
+
 			if ($('.editFieldFirst').length == 0) {
 				editableFields = $(this).siblings('.editableSingle, .editableMulti').length + 1;
 				$(this).html('<div class="editFieldWrapper"><textarea class="editField editFieldFirst">' + value + '</textarea></div>');
-				
-				if (!simpleMode) {                       
+
+				if (!simpleMode) {
 				   $(this).siblings('.editableSingle, .editableMulti').click();
 				}
-				
+
 				addSaveControllers(function(){
 					$('.editFieldFirst').focus();
 				});
@@ -113,11 +118,11 @@ $.inlineEdit = function(urls, options){
 			}
 		}
 	});
-	
+
 	$('.editableSingle a, .editableMulti a').click(function(){
 		linkClicked = true;
 	});
-	
+
 	function addSaveControllers(callback)
 	{
 		if ($('.editFieldWrapper:last').parent().hasClass('removable')) {
@@ -140,7 +145,7 @@ $.inlineEdit = function(urls, options){
 				editCancel();
 			}
 		});
-		
+
 		if (options.animate) {
 			$('.editFieldWrapper').slideDown(500, callback);
 		} else {
@@ -148,38 +153,38 @@ $.inlineEdit = function(urls, options){
 			callback();
 		}
 	}
-	
+
 	function editCancel(e)
 	{
 		linkClicked = typeof(e) != 'undefined';   // If e is set, call comes from mouse click
-		
+
 		$('.editField').each(function(){
 			var $td = $(this).parents('.editableSingle, .editableMulti');
 			removeEditField($td, getInitialValue($td), false);
 		});
 	}
-	
+
 	function editRemove()
 	{
 		linkClicked = true;
-		
+
 		if (!confirm('Are you sure that you want to remove this?')) {
 			return false;
 		}
-		
+
 		$('.editFieldSaveControllers > button, .editField').attr('disabled', 'disabled').html('Removing...');
-		
+
 		var $td = $('.editField').eq(0).parents('.editableSingle, .editableMulti');
 		var url = editableUrls.remove;
 		var id = options.getId($td);
-		
+
 		$.ajax({
 			url: url + id,
 			type: 'POST',
 			success: function(msg){
 				$('.editField').each(function(){
 					var $td = $(this).parents('.editableSingle, .editableMulti');
-					
+
 					if (msg == 1) {
 						if (options.animate) {
 							$td.slideUp(500, function(){
@@ -192,7 +197,7 @@ $.inlineEdit = function(urls, options){
 						removeEditField($td, getInitialValue($td), false, options.colors.error);
 					}
 				});
-				
+
 				options.afterRemove({
 					success: msg == 1,
 					id: id
@@ -206,7 +211,7 @@ $.inlineEdit = function(urls, options){
 			}
 		});
 	}
-	
+
 	function removeEditField($td, value, animateColor, fromColor)
 	{
 		var f = function(){
@@ -220,7 +225,7 @@ $.inlineEdit = function(urls, options){
 				$td.css('color', fromColor);
 			}
 		};
-		
+
 		if (options.animate) {
 			$td.children('.editFieldWrapper').slideUp(500, f);
 		} else {
@@ -228,19 +233,19 @@ $.inlineEdit = function(urls, options){
 			f();
 		}
 	}
-	
+
 	function saveInitialValue($td)
 	{
 		var index = options.getId($td) + getTypeAndUrl($td).type;
 		initialValues[index] = $td.html();
 	}
-	
+
 	function getInitialValue($td)
 	{
 		var index = options.getId($td) + getTypeAndUrl($td).type;
 		return initialValues[index];
 	}
-	
+
 	function getId($td)
 	{
 		var id;
@@ -252,7 +257,7 @@ $.inlineEdit = function(urls, options){
 		});
 		return id;
 	}
-	
+
 	function getTypeAndUrl($td)
 	{
 		var typeAndUrl;
@@ -264,7 +269,7 @@ $.inlineEdit = function(urls, options){
 		});
 		return typeAndUrl;
 	}
-	
+
 	function editSave()
 	{
 		$('.editFieldSaveControllers > button, .editField').attr('disabled', 'disabled');
@@ -275,7 +280,7 @@ $.inlineEdit = function(urls, options){
 			var id = options.getId($td);
 			var value = $(this).val();
 			var color = options.colors.standard;
-			
+
 			$.ajax({
 				url: url + id,
 				data: {data: value},
@@ -286,7 +291,7 @@ $.inlineEdit = function(urls, options){
 					} else {
 						removeEditField($td, value, false, options.colors.error);
 					}
-					
+
 					options.afterSave({
 						success: msg == 1,
 						type: typeAndUrl.type,
